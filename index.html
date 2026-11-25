@@ -1,0 +1,1063 @@
+# โปรแกรมจำลองคำนวณเวลาชาร์จและจุดคุ้มทุน EV (index.html)
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>โปรแกรมจำลองคำนวณเวลาชาร์จ EV (Cleanline)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Prompt สำหรับภาษาไทยที่อ่านง่ายและทันสมัย -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #f4f6f5;
+      color: #1f2937;
+    }
+    /* ปรับแต่งแถบเลื่อน (Range Slider) โทนสีเขียว Cleanline */
+    input[type="range"] {
+      accent-color: #059669;
+    }
+    .card-shadow {
+      box-shadow: 0 4px 20px -2px rgba(17, 24, 39, 0.06);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-12">
+
+  <!-- แถบเมนูสลับหน้า (Navigation Bar) -->
+  <nav class="bg-gray-900 text-white px-4 py-2 shadow-sm sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto flex items-center justify-between">
+      <!-- โลโก้ CLEANLINE EV by Powermatic Co.,Ltd. (แทนที่ข้อความเดิม) -->
+      <div class="bg-white rounded-lg px-3 py-1 flex flex-col items-center justify-center leading-none shadow-xs">
+        <span class="text-sm sm:text-base font-extrabold tracking-tight text-emerald-700">
+          CLEANLINE EV
+        </span>
+        <span class="text-[9px] sm:text-[10px] font-medium text-gray-500 mt-0.5">
+          by Powermatic Co.,Ltd.
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button type="button" id="tabPage1" onclick="switchPage('page1')"
+          class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 text-white transition cursor-pointer">
+          หน้า 1: คำนวณเวลาชาร์จ
+        </button>
+        <button type="button" id="tabPage2" onclick="switchPage('page2')"
+          class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition cursor-pointer">
+          หน้า 2: วิเคราะห์จุดคุ้มทุน (ROI)
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ==================== หน้าที่ 1: โปรแกรมจำลองคำนวณเวลาชาร์จจริง ==================== -->
+  <div id="page1">
+    <!-- Header Section: ธีมสีขาว-เขียว-เทา สไตล์ Cleanline EV -->
+    <header class="bg-white border-b-4 border-emerald-600 text-gray-800 py-8 px-4 shadow-sm">
+      <div class="max-w-4xl mx-auto text-center">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-gray-900 mb-2">
+          โปรแกรมจำลองคำนวณเวลาชาร์จจริง
+        </h1>
+        <p class="text-gray-600 text-sm sm:text-base mt-2">
+          🏠 AC Wallbox: ชาร์จข้ามคืนที่บ้าน <span class="mx-2 text-emerald-500 font-bold">|</span> ⚡ DC Station: ชาร์จไวระหว่างเดินทาง
+        </p>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-6 space-y-6">
+
+      <!-- ปุ่มกดแสดง/ซ่อน และส่วนสูตรจำง่าย 3 ขั้นตอน (ซ่อนไว้เป็นค่าเริ่มต้น) -->
+      <div>
+        <button type="button" id="togglePage1FormulaBtn" onclick="togglePage1Formulas()"
+          class="w-full sm:w-auto bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-800 border border-gray-300 hover:border-emerald-300 font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer">
+          <span>📌</span>
+          <span id="togglePage1FormulaText">แสดงสูตรจำง่าย 3 ขั้นตอนสำหรับเซลส์มือใหม่</span>
+          <span id="togglePage1FormulaArrow" class="text-xs transition-transform duration-200">▼</span>
+        </button>
+
+        <section id="page1FormulaBox" class="hidden mt-3 bg-white rounded-xl px-4 py-3.5 shadow-xs border border-gray-200 text-xs sm:text-sm text-gray-600">
+          <div class="font-semibold text-gray-700 flex items-center gap-1.5 mb-2">
+            <span>📌</span>
+            <span>สูตรจำง่าย 3 ขั้นตอนสำหรับเซลส์มือใหม่</span>
+          </div>
+          <div class="flex flex-col space-y-2 leading-relaxed">
+            <div class="bg-emerald-50/50 border border-emerald-200/60 rounded-lg px-3 py-2">
+              <strong class="text-emerald-900">1. ยึดตัวเลข "ที่ต่ำกว่า" เสมอ:</strong> เปรียบเทียบกำลังไฟ <em>ตู้ชาร์จ</em> กับ <em>สเปกรถ (OBC / DC Max)</em> ตัวไหนน้อยกว่า ให้ใช้ตัวนั้นคำนวณ!
+            </div>
+            <div class="bg-gray-50 border border-gray-200/80 rounded-lg px-3 py-2">
+              <strong class="text-gray-800">2. สูตรคำนวณ:</strong> [ ความจุแบต (kWh) × % ที่ต้องการชาร์จ ] ÷ กำลังไฟชาร์จจริง (kW)
+            </div>
+            <div class="bg-emerald-50/50 border border-emerald-200/60 rounded-lg px-3 py-2">
+              <strong class="text-emerald-900">3. บวกเผื่อหน้างาน:</strong> ชาร์จบ้าน <strong>AC บวกเพิ่ม ~10%</strong> (Loss ความร้อน) | ชาร์จตู้ <strong>DC บวกเพิ่ม ~15%</strong> (กราฟไฟตกช่วงท้าย)
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ส่วนข้อมูลรถยนต์ไฟฟ้า (EV) และผลลัพธ์ -->
+      <section class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-gray-200">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 pb-4 border-b border-gray-100">
+          <h2 class="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+            <span>🚗</span> ข้อมูลรถยนต์ไฟฟ้า (EV)
+          </h2>
+          <!-- แถบสรุปพลังงานไฟฟ้าที่ต้องเติม (ย้ายมาอยู่หลังหัวข้อและชิดขวา) -->
+          <div class="bg-gray-800 text-white rounded-xl px-4 py-2 flex items-center justify-between sm:justify-end gap-3 border-l-4 border-emerald-500">
+            <span class="text-xs sm:text-sm text-gray-200">พลังงานไฟฟ้าที่ต้องเติมเข้าแบตเตอรี่:</span>
+            <span id="energyNeeded" class="text-base sm:text-lg font-bold text-emerald-400">48.0 kWh</span>
+          </div>
+        </div>
+
+        <!-- ฟอร์มกรอกข้อมูลรถยนต์ไฟฟ้า -->
+        <div class="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label for="obcKw" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                AC: OBC (kW)
+              </label>
+              <input type="number" id="obcKw" value="7.4" min="1" max="50" step="0.1"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            </div>
+            <div>
+              <label for="dcMaxKw" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                DC: DC Max (kW)
+              </label>
+              <input type="number" id="dcMaxKw" value="80" min="1" max="500" step="1"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            </div>
+            <div>
+              <label for="batteryKwh" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                ความจุแบตเตอรี่ BMS (kWh)
+              </label>
+              <input type="number" id="batteryKwh" value="60" min="5" max="200" step="0.5"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label for="chargePercent" class="text-xs sm:text-sm font-medium text-gray-700">
+                % ที่ต้องการชาร์จเพิ่ม
+              </label>
+              <span id="percentBadge" class="text-sm font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-md">
+                80%
+              </span>
+            </div>
+            <input type="range" id="chargePercent" value="80" min="5" max="100" step="5"
+              class="w-full cursor-pointer">
+            <div class="flex justify-between text-[11px] text-gray-400 mt-0.5">
+              <span>5%</span>
+              <span>50%</span>
+              <span>100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ปุ่มคำนวณเวลาชาร์จ ยาวเต็มความกว้างเท่ากับตาราง -->
+        <div class="mt-5">
+          <button type="button" id="calculateBtn"
+            class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-base sm:text-lg py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
+            <span>⚡</span>
+            <span>คำนวณเวลาชาร์จ</span>
+          </button>
+          <p id="pendingNotice" class="hidden text-center text-xs text-amber-600 font-medium mt-2">
+            * มีการแก้ไขข้อมูลรถยนต์ไฟฟ้า กรุณากดปุ่ม "คำนวณเวลาชาร์จ" ด้านบนเพื่ออัปเดตผลลัพธ์ในตาราง
+          </p>
+        </div>
+
+        <!-- ตารางเปรียบเทียบระยะเวลาชาร์จแต่ละรุ่น -->
+        <div class="mt-5">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
+            <h3 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span>📊</span>
+              <span>ตารางวิเคราะห์เวลาชาร์จจริง</span>
+            </h3>
+            <span class="text-xs sm:text-sm text-gray-500 font-medium sm:text-right">
+              ทุกครั้งที่เปลี่ยนแปลงข้อมูลกรุณากดปุ่มคำนวณ
+            </span>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+            <table class="w-full text-left border-collapse min-w-[720px]">
+              <thead>
+                <tr class="bg-gray-100 border-b border-gray-200 text-gray-700 text-xs sm:text-sm font-bold">
+                  <th class="py-3.5 px-4">รุ่นเครื่องชาร์จ</th>
+                  <th class="py-3.5 px-4 text-center">ประเภท</th>
+                  <th class="py-3.5 px-4 text-right">ราคาขาย</th>
+                  <th class="py-3.5 px-4 text-center">กำลังไฟชาร์จจริง</th>
+                  <th class="py-3.5 px-4 text-center">เวลาทฤษฎี</th>
+                  <th class="py-3.5 px-4 text-right text-emerald-800 bg-emerald-50/70">เวลาชาร์จจริง (รวมเผื่อ)</th>
+                </tr>
+              </thead>
+              <tbody id="chargerTableBody" class="divide-y divide-gray-200 text-sm bg-white">
+                <!-- แถวข้อมูลจะถูกสร้างผ่าน JavaScript -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- กล่องคำบรรยายรายละเอียดแถวที่คลิกเลือกในตารางหน้าที่ 1 -->
+          <div id="page1RowDetailBox" class="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm text-gray-700 transition-all">
+            <div class="flex items-center gap-2 text-gray-500">
+              <span>👆</span>
+              <span>คลิกที่บรรทัดใดก็ได้ในตารางด้านบน เพื่อดูคำบรรยายสรุปข้อมูลของเครื่องชาร์จรุ่นนั้น</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- กล่องสีเขียวด้านล่าง: บทสรุปว่า AC/DC รุ่นใดทำเวลาดี และลงทุนคุ้มค่ามากกว่ากัน -->
+        <div class="mt-5 bg-emerald-50/80 border border-emerald-500/30 rounded-xl p-3.5 sm:p-4 shadow-xs" id="investmentSummary">
+          <!-- เนื้อหาบทสรุปจะถูกอัปเดตผ่าน JavaScript -->
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- ==================== หน้าที่ 2: EV Station ROI Calculator ==================== -->
+  <div id="page2" class="hidden">
+    <!-- Header Section -->
+    <header class="bg-white border-b-4 border-emerald-600 text-gray-800 py-8 px-4 shadow-sm">
+      <div class="max-w-5xl mx-auto text-center">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
+          เครื่องมือวิเคราะห์จุดคุ้มทุนการติดตั้งเครื่องชาร์จ EV
+          <span class="block mt-1">(ส่วนตัว/องค์กร/ธุรกิจ)</span>
+        </h1>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 mt-6 space-y-6">
+
+      <!-- ส่วนฟอร์มกรอกข้อมูล 3 หมวดหมู่ -->
+      <section class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-gray-200 space-y-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          
+          <!-- 1. ข้อมูลเครื่องชาร์จ EV -->
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col justify-between">
+            <div>
+              <h3 class="text-base font-bold text-gray-800 pb-2.5 mb-3 border-b border-gray-200 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">1</span>
+                <span>ข้อมูลเครื่องชาร์จ EV</span>
+              </h3>
+              
+              <div class="space-y-3">
+                <div>
+                  <label for="roiChargerKw" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    กำลังไฟฟ้า (kW)
+                  </label>
+                  <input type="number" id="roiChargerKw" value="60" min="1" max="1000" step="0.1"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                </div>
+
+                <div>
+                  <label for="roiMachineCost" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    ราคาเครื่อง (บาท)
+                  </label>
+                  <input type="number" id="roiMachineCost" value="400000" min="0" step="1000"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                </div>
+
+                <div>
+                  <label for="roiInstallCost" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    ค่าดำเนินการ: ติดตั้ง+อื่นๆ (บาท)
+                  </label>
+                  <input type="number" id="roiInstallCost" value="220000" min="0" step="1000"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                </div>
+              </div>
+            </div>
+
+            <!-- ยอดรวมเงินลงทุน (บาท) -->
+            <div class="mt-4 pt-3 border-t border-gray-200">
+              <div class="bg-gray-800 text-white rounded-lg px-3.5 py-2.5 flex items-center justify-between border-l-4 border-emerald-500">
+                <span class="text-xs text-gray-200">ยอดรวมเงินลงทุน (บาท)</span>
+                <span id="roiTotalInvestmentDisplay" class="text-base sm:text-lg font-bold text-emerald-400">620,000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. โครงสร้างราคาซื้อ-ขายไฟ -->
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col justify-between">
+            <div>
+              <h3 class="text-base font-bold text-gray-800 pb-2.5 mb-3 border-b border-gray-200 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">2</span>
+                <span>โครงสร้างราคาซื้อ-ขายไฟ</span>
+              </h3>
+
+              <!-- ตัวเลือกเรทค่าไฟอ้างอิง -->
+              <div class="space-y-2 mb-3 text-[11px]">
+                <div class="bg-white border border-gray-200 rounded-lg p-2">
+                  <div class="font-semibold text-gray-600 mb-1">ส่วนตัว/องค์กร:</div>
+                  <div class="flex flex-wrap gap-1">
+                    <button type="button" onclick="setRoiElectricityCost(4.45)" class="px-2 py-0.5 rounded bg-gray-100 hover:bg-emerald-100 hover:text-emerald-800 text-gray-700 font-medium transition cursor-pointer">ปกติ=4.45</button>
+                    <button type="button" onclick="setRoiElectricityCost(6.38)" class="px-2 py-0.5 rounded bg-gray-100 hover:bg-emerald-100 hover:text-emerald-800 text-gray-700 font-medium transition cursor-pointer">On-Peak=6.38</button>
+                    <button type="button" onclick="setRoiElectricityCost(3)" class="px-2 py-0.5 rounded bg-gray-100 hover:bg-emerald-100 hover:text-emerald-800 text-gray-700 font-medium transition cursor-pointer">Off-Peak=3</button>
+                  </div>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-lg p-2">
+                  <div class="font-semibold text-gray-600 mb-1">ธุรกิจ:</div>
+                  <div class="flex flex-wrap gap-1">
+                    <button type="button" onclick="setRoiElectricityCost(4.905)" class="px-2 py-0.5 rounded bg-gray-100 hover:bg-emerald-100 hover:text-emerald-800 text-gray-700 font-medium transition cursor-pointer">ปกติ=4.905</button>
+                    <button type="button" onclick="setRoiElectricityCost(3.294)" class="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 font-medium transition cursor-pointer">Low Priority=3.294</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                <div>
+                  <label for="roiElectricityCost" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    ต้นทุนไฟ + FT 0.1623 (บาท/หน่วย)
+                  </label>
+                  <input type="number" id="roiElectricityCost" value="3.294" min="0" step="0.001"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                </div>
+
+                <div>
+                  <label for="roiSellingPrice" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    ราคาขาย (บาท/หน่วย)
+                  </label>
+                  <input type="number" id="roiSellingPrice" value="7" min="0" step="0.1"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center">
+              <span>ส่วนต่างกำไรขั้นต้น/หน่วย:</span>
+              <span id="roiMarginPerUnit" class="font-bold text-emerald-700">3.706 บาท</span>
+            </div>
+          </div>
+
+          <!-- 3. ค่าบริการคลาวด์แพลตฟอร์ม -->
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col justify-between">
+            <div>
+              <h3 class="text-base font-bold text-gray-800 pb-2.5 mb-3 border-b border-gray-200 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">3</span>
+                <span>ค่าบริการคลาวด์แพลตฟอร์ม</span>
+              </h3>
+
+              <div class="bg-emerald-50/70 border border-emerald-200 rounded-lg p-2.5 mb-3 text-xs text-emerald-900 flex items-center justify-between">
+                <span>Cleanline Platform=<strong>2500 บาท/ปี</strong>, mPay=<strong>1%</strong></span>
+                <button type="button" onclick="setRoiDefaultPlatform()" class="text-[11px] bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded transition cursor-pointer shrink-0 ml-1">
+                  ใช้ค่านี้
+                </button>
+              </div>
+
+              <div class="space-y-3">
+                <div>
+                  <label for="roiPlatformFee" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    ค่าบริการแพลตฟอร์ม (บาท/ปี)
+                  </label>
+                  <input type="number" id="roiPlatformFee" value="2500" min="0" step="100"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                </div>
+
+                <div>
+                  <label for="roiPaymentFeePercent" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    อัตราค่าธรรมเนียมการชำระเงิน (%)
+                  </label>
+                  <input type="number" id="roiPaymentFeePercent" value="1" min="0" max="100" step="0.1"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-gray-200 text-[11px] text-gray-500">
+              * ค่าธรรมเนียมการชำระเงินคำนวณจากยอดรายได้รวมต่อปี
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ปุ่มคำนวณและวิเคราะห์ผลลัพธ์ -->
+        <div>
+          <button type="button" id="roiCalculateBtn"
+            class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-base sm:text-lg py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
+            <span>📊</span>
+            <span>คำนวณและวิเคราะห์ผลลัพธ์</span>
+          </button>
+        </div>
+
+        <!-- ตารางวิเคราะห์รายได้และจุดคุ้มทุน (ต่อปี) -->
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
+            <h3 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span>📊</span>
+              <span>ตารางวิเคราะห์รายได้และจุดคุ้มทุน (ต่อปี)</span>
+            </h3>
+            <span class="text-xs sm:text-sm text-gray-500 font-medium sm:text-right">
+              ทุกครั้งที่เปลี่ยนแปลงข้อมูลกรุณากดปุ่มคำนวณ
+            </span>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+            <table class="w-full text-left border-collapse min-w-[760px]">
+              <thead>
+                <tr class="bg-gray-100 border-b border-gray-200 text-gray-700 text-xs sm:text-sm font-bold">
+                  <th class="py-3.5 px-3 text-center">ชั่วโมงชาร์จ/วัน</th>
+                  <th class="py-3.5 px-3 text-right">ไฟที่ใช้ (kWh)/เดือน</th>
+                  <th class="py-3.5 px-3 text-right">รายได้ (บาท)/ปี</th>
+                  <th class="py-3.5 px-3 text-right">ค่าใช้จ่าย (บาท)/ปี</th>
+                  <th class="py-3.5 px-3 text-right text-emerald-800 bg-emerald-50/70">กำไรสุทธิ (บาท)/ปี</th>
+                  <th class="py-3.5 px-3 text-center">ROI (%)</th>
+                  <th class="py-3.5 px-3 text-center bg-gray-200/60">คืนทุน (ระยะเวลา)</th>
+                </tr>
+              </thead>
+              <tbody id="roiTableBody" class="divide-y divide-gray-200 text-sm bg-white">
+                <!-- แถวข้อมูลจะถูกสร้างผ่าน JavaScript -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- กล่องคำบรรยายรายละเอียดแถวที่คลิกเลือกในตารางหน้าที่ 2 -->
+          <div id="page2RowDetailBox" class="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm text-gray-700 transition-all">
+            <div class="flex items-center gap-2 text-gray-500">
+              <span>👆</span>
+              <span>คลิกที่บรรทัดใดก็ได้ในตารางด้านบน เพื่อดูคำบรรยายสรุปผลประกอบการและจุดคุ้มทุนของชั่วโมงชาร์จนั้น</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ปุ่มกดแสดง/ซ่อน และกล่องอธิบายสูตรคำนวณตารางวิเคราะห์รายได้และจุดคุ้มทุน -->
+        <div class="pt-1">
+          <button type="button" id="toggleFormulaBtn" onclick="toggleRoiFormulas()"
+            class="w-full sm:w-auto bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-800 border border-gray-300 hover:border-emerald-300 font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer">
+            <span>📝</span>
+            <span id="toggleFormulaText">แสดงสูตรคำนวณตารางวิเคราะห์รายได้และจุดคุ้มทุน</span>
+            <span id="toggleFormulaArrow" class="text-xs transition-transform duration-200">▼</span>
+          </button>
+
+          <div id="roiFormulaBox" class="hidden mt-3 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 text-xs sm:text-sm text-gray-700">
+            <div class="font-bold text-gray-800 text-sm mb-3 flex items-center gap-1.5">
+              <span>📝</span>
+              <span>อธิบายสูตรคำนวณตารางวิเคราะห์รายได้และจุดคุ้มทุน</span>
+            </div>
+            
+            <ol class="space-y-2">
+              <li class="bg-white px-3.5 py-2.5 rounded-lg border border-gray-200/90 flex items-center gap-2.5 overflow-x-auto">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+                <div class="whitespace-nowrap text-xs sm:text-sm">
+                  <strong class="text-emerald-800">ไฟที่ใช้ (kWh/เดือน)</strong>
+                  <span class="text-gray-600"> = กำลังไฟฟ้า (kW) × ชั่วโมงชาร์จ/วัน × 30 วัน</span>
+                </div>
+              </li>
+
+              <li class="bg-white px-3.5 py-2.5 rounded-lg border border-gray-200/90 flex items-center gap-2.5 overflow-x-auto">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+                <div class="whitespace-nowrap text-xs sm:text-sm">
+                  <strong class="text-emerald-800">รายได้ (บาท/ปี)</strong>
+                  <span class="text-gray-600"> = ไฟที่ใช้ (kWh/เดือน) × ราคาขาย (บาท/หน่วย) × 12 เดือน</span>
+                </div>
+              </li>
+
+              <li class="bg-white px-3.5 py-2.5 rounded-lg border border-gray-200/90 flex items-center gap-2.5 overflow-x-auto">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
+                <div class="whitespace-nowrap text-xs sm:text-sm">
+                  <strong class="text-emerald-800">ค่าใช้จ่ายรวม (บาท/ปี)</strong>
+                  <span class="text-gray-600"> = ต้นทุนค่าไฟ (บาท/ปี) + ค่าบริการแพลตฟอร์ม (บาท/ปี) + ค่าธรรมเนียมการชำระเงิน (บาท/ปี)</span>
+                </div>
+              </li>
+
+              <li class="bg-white px-3.5 py-2.5 rounded-lg border border-gray-200/90 flex items-center gap-2.5 overflow-x-auto">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">4</span>
+                <div class="whitespace-nowrap text-xs sm:text-sm">
+                  <strong class="text-emerald-800">กำไรสุทธิ (บาท/ปี)</strong>
+                  <span class="text-gray-600"> = รายได้ (บาท/ปี) − ค่าใช้จ่ายรวม (บาท/ปี)</span>
+                </div>
+              </li>
+
+              <li class="bg-white px-3.5 py-2.5 rounded-lg border border-gray-200/90 flex items-center gap-2.5 overflow-x-auto">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">5</span>
+                <div class="whitespace-nowrap text-xs sm:text-sm">
+                  <strong class="text-emerald-800">ผลตอบแทนจากการลงทุน (ROI %)</strong>
+                  <span class="text-gray-600"> = (กำไรสุทธิต่อปี ÷ ยอดรวมเงินลงทุน) × 100</span>
+                </div>
+              </li>
+
+              <li class="bg-white px-3.5 py-2.5 rounded-lg border border-gray-200/90 flex items-center gap-2.5 overflow-x-auto">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">6</span>
+                <div class="whitespace-nowrap text-xs sm:text-sm">
+                  <strong class="text-emerald-800">ระยะเวลาคืนทุน</strong>
+                  <span class="text-gray-600"> = ยอดรวมเงินลงทุน ÷ กำไรสุทธิต่อปี (แปลงเป็น ปี และ เดือน)</span>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ==================== ระบบสลับหน้า (Page 1 / Page 2) ====================
+    function switchPage(pageId) {
+      const page1El = document.getElementById('page1');
+      const page2El = document.getElementById('page2');
+      const tab1Btn = document.getElementById('tabPage1');
+      const tab2Btn = document.getElementById('tabPage2');
+
+      if (pageId === 'page1') {
+        page1El.classList.remove('hidden');
+        page2El.classList.add('hidden');
+        tab1Btn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 text-white transition cursor-pointer';
+        tab2Btn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition cursor-pointer';
+      } else {
+        page1El.classList.add('hidden');
+        page2El.classList.remove('hidden');
+        tab2Btn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 text-white transition cursor-pointer';
+        tab1Btn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition cursor-pointer';
+      }
+    }
+
+    // ==================== หน้าที่ 1: คำนวณเวลาชาร์จ EV ====================
+    function togglePage1Formulas() {
+      const formulaBox = document.getElementById('page1FormulaBox');
+      const toggleText = document.getElementById('togglePage1FormulaText');
+      const toggleArrow = document.getElementById('togglePage1FormulaArrow');
+
+      if (formulaBox.classList.contains('hidden')) {
+        formulaBox.classList.remove('hidden');
+        toggleText.textContent = 'ซ่อนสูตรจำง่าย 3 ขั้นตอนสำหรับเซลส์มือใหม่';
+        toggleArrow.textContent = '▲';
+      } else {
+        formulaBox.classList.add('hidden');
+        toggleText.textContent = 'แสดงสูตรจำง่าย 3 ขั้นตอนสำหรับเซลส์มือใหม่';
+        toggleArrow.textContent = '▼';
+      }
+    }
+
+    const obcInput = document.getElementById('obcKw');
+    const dcMaxInput = document.getElementById('dcMaxKw');
+    const batteryInput = document.getElementById('batteryKwh');
+    const percentSlider = document.getElementById('chargePercent');
+    const percentBadge = document.getElementById('percentBadge');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const pendingNotice = document.getElementById('pendingNotice');
+
+    const energyNeededEl = document.getElementById('energyNeeded');
+    const chargerTableBody = document.getElementById('chargerTableBody');
+    const page1RowDetailBox = document.getElementById('page1RowDetailBox');
+    const investmentSummaryEl = document.getElementById('investmentSummary');
+
+    let latestPage1RowsData = [];
+
+    function resetPage1RowDetailBox() {
+      page1RowDetailBox.className = 'mt-3 bg-gray-50 border border-gray-200 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm text-gray-700 transition-all';
+      page1RowDetailBox.innerHTML = `
+        <div class="flex items-center gap-2 text-gray-500">
+          <span>👆</span>
+          <span>คลิกที่บรรทัดใดก็ได้ในตารางด้านบน เพื่อดูคำบรรยายสรุปข้อมูลของเครื่องชาร์จรุ่นนั้น</span>
+        </div>
+      `;
+    }
+
+    // รายการรุ่นเครื่องชาร์จเรียงตามขนาดกำลังไฟ (และระดับงบลงทุนจากน้อยไปมาก)
+    const chargerModels = [
+      { label: '7.4 (kW)', kw: 7.4, type: 'AC', price: '~34,500 ฿', buffer: 1.10, bufferLabel: '+Loss 10%' },
+      { label: '22 (kW)', kw: 22, type: 'AC', price: '~42,500 ฿', buffer: 1.10, bufferLabel: '+Loss 10%' },
+      { label: '30 (kW)', kw: 30, type: 'DC', price: '~285,000 ฿', buffer: 1.15, bufferLabel: '+เผื่อกราฟตก 15%' },
+      { label: '60 (kW)', kw: 60, type: 'DC', price: '~620,000 ฿', buffer: 1.15, bufferLabel: '+เผื่อกราฟตก 15%' },
+      { label: '120 (kW)', kw: 120, type: 'DC', price: '~1,150,000 ฿', buffer: 1.15, bufferLabel: '+เผื่อกราฟตก 15%' },
+      { label: '180 (kW)', kw: 180, type: 'DC', price: '~1,450,000 ฿', buffer: 1.15, bufferLabel: '+เผื่อกราฟตก 15%' },
+      { label: '240 (kW)', kw: 240, type: 'DC', price: '~1,700,000 ฿', buffer: 1.15, bufferLabel: '+เผื่อกราฟตก 15%' }
+    ];
+
+    /**
+     * แปลงชั่วโมงทศนิยมเป็นข้อความ "X ชม. Y นาที"
+     */
+    function formatHoursToThai(decimalHours) {
+      if (!isFinite(decimalHours) || decimalHours <= 0) return '0 นาที';
+      const totalMinutes = Math.round(decimalHours * 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      if (hours === 0) {
+        return `${minutes} นาที`;
+      } else if (minutes === 0) {
+        return `${hours} ชม.`;
+      }
+      return `${hours} ชม. ${minutes} นาที`;
+    }
+
+    /**
+     * แสดงคำบรรยายของแถวที่ถูกคลิกในตารางหน้าที่ 1
+     */
+    function selectPage1Row(index) {
+      const item = latestPage1RowsData[index];
+      if (!item) return;
+
+      // ไฮไลต์แถวที่ถูกเลือกในตาราง
+      const rows = chargerTableBody.querySelectorAll('tr');
+      rows.forEach((tr, idx) => {
+        if (idx === index) {
+          tr.classList.add('ring-2', 'ring-inset', 'ring-emerald-500', 'bg-emerald-50/80');
+        } else {
+          tr.classList.remove('ring-2', 'ring-inset', 'ring-emerald-500', 'bg-emerald-50/80');
+        }
+      });
+
+      const limitExplanation = item.isLimitedByCar
+        ? `แม้เครื่องชาร์จรุ่นนี้จะจ่ายไฟได้สูงสุด <strong>${item.kw} kW</strong> แต่เนื่องจากตัวรถรับไฟ ${item.type} ได้สูงสุด <strong>${Number(item.carLimit.toFixed(1))} kW</strong> ระบบจึงจ่ายไฟเข้าแบตเตอรี่จริงที่ <strong>${Number(item.effectiveKw.toFixed(1))} kW</strong>`
+        : `ตัวรถสามารถรับไฟ ${item.type} ได้เต็มกำลังของตู้ชาร์จที่ <strong>${Number(item.effectiveKw.toFixed(1))} kW</strong>`;
+
+      const bestNote = item.isBestValueModel
+        ? `<span class="inline-block ml-1.5 text-[11px] font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">⭐ รุ่นแนะนำที่คุ้มค่าที่สุดฝั่ง ${item.type}</span>`
+        : '';
+
+      page1RowDetailBox.className = 'mt-3 bg-white border-l-4 border-emerald-600 border border-gray-200 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm text-gray-700 shadow-xs';
+      page1RowDetailBox.innerHTML = `
+        <div class="font-bold text-gray-900 mb-1 flex flex-wrap items-center gap-1">
+          <span>📋 รายละเอียดรุ่น ${item.label} (${item.type === 'AC' ? '🏠 AC Wallbox' : '⚡ DC Fast Charge'})</span>
+          ${bestNote}
+        </div>
+        <p class="leading-relaxed text-gray-600">
+          เครื่องชาร์จ <strong>รุ่น ${item.label}</strong> ราคาขายประมาณ <strong>${item.price}</strong> สำหรับการเติมพลังงาน <strong>${item.energyNeeded.toFixed(1)} kWh</strong> (${item.percent}% ของแบตเตอรี่ ${item.batteryKwh} kWh): ${limitExplanation} ใช้เวลาคำนวณทางทฤษฎี <strong>${item.theoryText}</strong> และเมื่อบวกเผื่อหน้างาน (${item.bufferLabel}) จะใช้เวลาชาร์จจริงประมาณ <strong class="text-emerald-700 text-sm sm:text-base">~${item.realText}</strong>
+        </p>
+      `;
+    }
+
+    /**
+     * ฟังก์ชันคำนวณเวลาชาร์จ สร้างตารางเปรียบเทียบ และสร้างบทสรุปความคุ้มค่าในการลงทุน
+     */
+    function calculateCharging() {
+      const obcKw = Math.max(0.1, parseFloat(obcInput.value) || 0);
+      const dcMaxKw = Math.max(0.1, parseFloat(dcMaxInput.value) || 0);
+      const batteryKwh = Math.max(1, parseFloat(batteryInput.value) || 0);
+      const percent = parseInt(percentSlider.value, 10) || 0;
+
+      // ซ่อนข้อความแจ้งเตือนเมื่อกดคำนวณแล้ว
+      pendingNotice.classList.add('hidden');
+      calculateBtn.classList.remove('ring-4', 'ring-amber-400/50');
+
+      // อัปเดตป้ายแสดงเปอร์เซ็นต์
+      percentBadge.textContent = `${percent}%`;
+
+      // พลังงานที่ต้องเติม (kWh)
+      const energyNeeded = batteryKwh * (percent / 100);
+      energyNeededEl.textContent = `${energyNeeded.toFixed(1)} kWh`;
+
+      // คำนวณผลลัพธ์ของทุกรุ่นล่วงหน้า
+      const calculatedModels = chargerModels.map(model => {
+        const carLimit = model.type === 'AC' ? obcKw : dcMaxKw;
+        const effectiveKw = Math.min(model.kw, carLimit);
+        const isLimitedByCar = model.kw > carLimit;
+        const theoryHours = energyNeeded / effectiveKw;
+        const realHours = theoryHours * model.buffer;
+
+        return {
+          ...model,
+          carLimit,
+          effectiveKw,
+          isLimitedByCar,
+          theoryHours,
+          realHours,
+          theoryText: formatHoursToThai(theoryHours),
+          realText: formatHoursToThai(realHours),
+          energyNeeded,
+          batteryKwh,
+          percent
+        };
+      });
+
+      // ค้นหาเวลาที่น้อยที่สุด (เร็วที่สุด) ของฝั่ง AC และ DC
+      const acModels = calculatedModels.filter(m => m.type === 'AC');
+      const dcModels = calculatedModels.filter(m => m.type === 'DC');
+
+      const bestAcTime = Math.min(...acModels.map(m => m.realHours));
+      const bestDcTime = Math.min(...dcModels.map(m => m.realHours));
+
+      // เลือกรุ่นแรกที่ทำเวลาได้น้อยที่สุด (ซึ่งเป็นรุ่นที่ลงทุนถูกที่สุดในกลุ่มที่ทำเวลาดีที่สุด)
+      const bestAcModel = acModels.find(m => Math.abs(m.realHours - bestAcTime) < 1e-9);
+      const bestDcModel = dcModels.find(m => Math.abs(m.realHours - bestDcTime) < 1e-9);
+
+      latestPage1RowsData = calculatedModels.map(m => ({
+        ...m,
+        isBestValueModel: (m === bestAcModel || m === bestDcModel)
+      }));
+
+      let rowsHtml = '';
+
+      latestPage1RowsData.forEach((model, index) => {
+        // จัดรูปแบบ Badge ประเภทไฟ (AC = เขียว, DC = เทา)
+        const typeBadge = model.type === 'AC'
+          ? '<span class="inline-block bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">🏠 AC</span>'
+          : '<span class="inline-block bg-gray-200 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">⚡ DC</span>';
+
+        // ดาวสีเหลืองเล็กๆ หลังคำว่า (kW) สำหรับรุ่นที่ถูกเลือกว่าดีที่สุด
+        const bestStarIcon = model.isBestValueModel
+          ? ' <span class="text-amber-400 text-xs align-middle" title="รุ่นที่แนะนำ">⭐</span>'
+          : '';
+
+        // แสดงหมายเหตุหากสเปกรถรับไฟได้น้อยกว่าตู้ชาร์จ
+        const limitNote = model.isLimitedByCar
+          ? `<div class="text-[11px] text-amber-600 font-normal mt-0.5">(รถรับสูงสุด ${Number(model.carLimit.toFixed(1))} kW)</div>`
+          : '';
+
+        // ไฮไลต์พื้นหลังแถวที่แนะนำ
+        const rowHighlightClass = model.isBestValueModel
+          ? (model.type === 'AC' ? 'bg-emerald-50/40 hover:bg-emerald-50/70' : 'bg-amber-50/40 hover:bg-amber-50/70')
+          : 'hover:bg-gray-50/90';
+
+        rowsHtml += `
+          <tr onclick="selectPage1Row(${index})" class="${rowHighlightClass} transition-colors cursor-pointer" title="คลิกเพื่อดูคำบรรยายรุ่น ${model.label}">
+            <td class="py-3.5 px-4 font-bold text-gray-900">
+              <span>รุ่น ${model.label}${bestStarIcon}</span>
+            </td>
+            <td class="py-3.5 px-4 text-center">${typeBadge}</td>
+            <td class="py-3.5 px-4 text-right font-semibold text-gray-700 whitespace-nowrap">${model.price}</td>
+            <td class="py-3.5 px-4 text-center font-semibold text-gray-800">
+              ${Number(model.effectiveKw.toFixed(1))} kW
+              ${limitNote}
+            </td>
+            <td class="py-3.5 px-4 text-center text-gray-600">
+              <div>${model.theoryText}</div>
+              <div class="text-[11px] text-gray-400">(${model.bufferLabel})</div>
+            </td>
+            <td class="py-3.5 px-4 text-right font-bold text-base sm:text-lg whitespace-nowrap ${model.type === 'AC' ? 'text-emerald-600 bg-emerald-50/40' : 'text-gray-900 bg-gray-50/40'}">
+              ~${model.realText}
+            </td>
+          </tr>
+        `;
+      });
+
+      chargerTableBody.innerHTML = rowsHtml;
+
+      // รีเซ็ตคำบรรยายใต้ตารางทุกครั้งที่กดปุ่มคำนวณใหม่
+      resetPage1RowDetailBox();
+
+      // สร้างคำอธิบายเหตุผลความคุ้มค่าของฝั่ง AC และ DC
+      const bestAcRealText = formatHoursToThai(bestAcModel.realHours);
+      const bestDcRealText = formatHoursToThai(bestDcModel.realHours);
+
+      const acReason = obcKw <= 7.4
+        ? `เนื่องจากรถรับไฟ AC สูงสุด <strong>${obcKw} kW</strong> รุ่น <strong>${bestAcModel.label}</strong> (ราคา ${bestAcModel.price}) จึงทำเวลาได้เต็มประสิทธิภาพเท่ากับรุ่น 22 kW แต่ประหยัดงบลงทุนอุปกรณ์และไม่ต้องขอขยายมิเตอร์ 3 เฟสเกินจำเป็น`
+        : `รถรองรับไฟ AC สูงถึง <strong>${obcKw} kW</strong> รุ่น <strong>${bestAcModel.label}</strong> (ราคา ${bestAcModel.price}) จึงดึงประสิทธิภาพการชาร์จที่บ้านได้เร็วที่สุด`;
+
+      const dcReason = bestDcModel.kw === 240 && dcMaxKw > 240
+        ? `รถรองรับไฟ DC สูงถึง <strong>${dcMaxKw} kW</strong> รุ่น <strong>${bestDcModel.label}</strong> (ราคา ${bestDcModel.price}) จึงทำเวลาชาร์จได้เร็วที่สุดในกลุ่ม`
+        : `เนื่องจากรถรับไฟ DC สูงสุด <strong>${dcMaxKw} kW</strong> รุ่น <strong>${bestDcModel.label}</strong> (ราคา ${bestDcModel.price}) จึงทำเวลาชาร์จได้เร็วที่สุดเท่ากับรุ่นที่กำลังไฟสูงกว่า แต่ใช้งบลงทุนเครื่องและหม้อแปลงถูกที่สุด`;
+
+      // อัปเดตกล่องบทสรุปความคุ้มค่าสีเขียวด้านล่าง
+      investmentSummaryEl.innerHTML = `
+        <div class="flex items-center gap-1.5 mb-2.5">
+          <span class="text-base">📊</span>
+          <h3 class="text-xs sm:text-sm font-bold text-emerald-950">
+            บทสรุปความคุ้มค่าในการลงทุน: เลือกรุ่นไหนดีที่สุด?
+          </h3>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          <div class="bg-white/95 border border-emerald-200/80 rounded-lg p-2.5 sm:p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded">🏠 ฝั่ง AC คุ้มค่าที่สุด</span>
+              <span class="text-xs font-bold text-emerald-700">~${bestAcRealText}</span>
+            </div>
+            <div class="font-bold text-gray-900 text-xs sm:text-sm mb-0.5">แนะนำ: รุ่น ${bestAcModel.label} <span class="text-[11px] font-medium text-gray-500">(${bestAcModel.price})</span></div>
+            <p class="text-[11px] sm:text-xs text-gray-600 leading-relaxed">${acReason}</p>
+          </div>
+
+          <div class="bg-white/95 border border-emerald-200/80 rounded-lg p-2.5 sm:p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-semibold text-gray-700 bg-gray-200/80 px-2 py-0.5 rounded">⚡ ฝั่ง DC คุ้มค่าที่สุด</span>
+              <span class="text-xs font-bold text-gray-900">~${bestDcRealText}</span>
+            </div>
+            <div class="font-bold text-gray-900 text-xs sm:text-sm mb-0.5">แนะนำ: รุ่น ${bestDcModel.label} <span class="text-[11px] font-medium text-gray-500">(${bestDcModel.price})</span></div>
+            <p class="text-[11px] sm:text-xs text-gray-600 leading-relaxed">${dcReason}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // เมื่อมีการแก้ไขข้อมูลรถยนต์ไฟฟ้า ให้อัปเดตตัวเลข % บน Slider และแจ้งเตือนให้กดปุ่มคำนวณ
+    function handleInputChange() {
+      const percent = parseInt(percentSlider.value, 10) || 0;
+      percentBadge.textContent = `${percent}%`;
+      pendingNotice.classList.remove('hidden');
+      calculateBtn.classList.add('ring-4', 'ring-amber-400/50');
+    }
+
+    [obcInput, dcMaxInput, batteryInput, percentSlider].forEach(el => {
+      el.addEventListener('input', handleInputChange);
+    });
+
+    calculateBtn.addEventListener('click', calculateCharging);
+
+    // ==================== หน้าที่ 2: EV Station ROI Calculator ====================
+    const roiChargerKwInput = document.getElementById('roiChargerKw');
+    const roiMachineCostInput = document.getElementById('roiMachineCost');
+    const roiInstallCostInput = document.getElementById('roiInstallCost');
+    const roiTotalInvestmentDisplay = document.getElementById('roiTotalInvestmentDisplay');
+
+    const roiElectricityCostInput = document.getElementById('roiElectricityCost');
+    const roiSellingPriceInput = document.getElementById('roiSellingPrice');
+    const roiMarginPerUnitEl = document.getElementById('roiMarginPerUnit');
+
+    const roiPlatformFeeInput = document.getElementById('roiPlatformFee');
+    const roiPaymentFeePercentInput = document.getElementById('roiPaymentFeePercent');
+
+    const roiCalculateBtn = document.getElementById('roiCalculateBtn');
+    const roiTableBody = document.getElementById('roiTableBody');
+    const page2RowDetailBox = document.getElementById('page2RowDetailBox');
+
+    const roiDailyHoursList = [1, 2, 3, 4, 5, 6, 8, 10, 12];
+    let latestPage2RowsData = [];
+
+    function resetPage2RowDetailBox() {
+      page2RowDetailBox.className = 'mt-3 bg-gray-50 border border-gray-200 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm text-gray-700 transition-all';
+      page2RowDetailBox.innerHTML = `
+        <div class="flex items-center gap-2 text-gray-500">
+          <span>👆</span>
+          <span>คลิกที่บรรทัดใดก็ได้ในตารางด้านบน เพื่อดูคำบรรยายสรุปผลประกอบการและจุดคุ้มทุนของชั่วโมงชาร์จนั้น</span>
+        </div>
+      `;
+    }
+
+    /**
+     * แปลงจำนวนปีทศนิยมเป็นระยะเวลาจริง (ปี และ เดือน)
+     */
+    function formatYearsToRealDuration(decimalYears) {
+      if (!isFinite(decimalYears) || decimalYears <= 0) return '0 เดือน';
+      const totalMonths = Math.round(decimalYears * 12);
+      if (totalMonths <= 0) return 'น้อยกว่า 1 เดือน';
+
+      const years = Math.floor(totalMonths / 12);
+      const months = totalMonths % 12;
+
+      if (years === 0) {
+        return `${months} เดือน`;
+      } else if (months === 0) {
+        return `${years} ปี`;
+      }
+      return `${years} ปี ${months} เดือน`;
+    }
+
+    /**
+     * แสดงคำบรรยายของแถวที่ถูกคลิกในตารางหน้าที่ 2
+     */
+    function selectPage2Row(index) {
+      const item = latestPage2RowsData[index];
+      if (!item) return;
+
+      // ไฮไลต์แถวที่ถูกเลือกในตาราง
+      const rows = roiTableBody.querySelectorAll('tr');
+      rows.forEach((tr, idx) => {
+        if (idx === index) {
+          tr.classList.add('ring-2', 'ring-inset', 'ring-emerald-500', 'bg-emerald-50/80');
+        } else {
+          tr.classList.remove('ring-2', 'ring-inset', 'ring-emerald-500', 'bg-emerald-50/80');
+        }
+      });
+
+      const profitSummaryText = item.netProfit >= 0
+        ? `มีกำไรสุทธิ <strong class="text-emerald-700">${formatNumberWithComma(item.netProfit, 0)} บาท/ปี</strong> (คิดเป็นผลตอบแทน <strong>ROI ${item.roiPercent.toFixed(2)}% ต่อปี</strong>) และจะคืนทุนเงินลงทุนรวม <strong>${formatNumberWithComma(item.totalInvestment, 0)} บาท</strong> ภายในระยะเวลา <strong class="text-emerald-800 text-sm sm:text-base">${item.paybackText}</strong>`
+        : `ขาดทุนสุทธิ <strong class="text-red-600">${formatNumberWithComma(Math.abs(item.netProfit), 0)} บาท/ปี</strong> (ROI ${item.roiPercent.toFixed(2)}%) ทำให้ยังไม่สามารถคืนทุนได้ในระดับชั่วโมงใช้งานนี้`;
+
+      page2RowDetailBox.className = 'mt-3 bg-white border-l-4 border-emerald-600 border border-gray-200 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm text-gray-700 shadow-xs';
+      page2RowDetailBox.innerHTML = `
+        <div class="font-bold text-gray-900 mb-1">
+          📋 สรุปผลการวิเคราะห์: กรณีมีผู้ใช้งานชาร์จเฉลี่ยวันละ ${item.hoursPerDay} ชั่วโมง (ตู้ขนาด ${item.chargerKw} kW)
+        </div>
+        <p class="leading-relaxed text-gray-600">
+          ปริมาณไฟที่ใช้เฉลี่ย <strong>${formatNumberWithComma(item.monthlyKwh, 0)} kWh/เดือน</strong> สร้างรายได้รวม <strong>${formatNumberWithComma(item.annualRevenue, 0)} บาท/ปี</strong> หักค่าใช้จ่ายรวม <strong>${formatNumberWithComma(item.annualExpense, 0)} บาท/ปี</strong> (ค่าไฟ + แพลตฟอร์ม + ค่าธรรมเนียม) จะ${profitSummaryText}
+        </p>
+      `;
+    }
+
+    function toggleRoiFormulas() {
+      const formulaBox = document.getElementById('roiFormulaBox');
+      const toggleText = document.getElementById('toggleFormulaText');
+      const toggleArrow = document.getElementById('toggleFormulaArrow');
+
+      if (formulaBox.classList.contains('hidden')) {
+        formulaBox.classList.remove('hidden');
+        toggleText.textContent = 'ซ่อนสูตรคำนวณตารางวิเคราะห์รายได้และจุดคุ้มทุน';
+        toggleArrow.textContent = '▲';
+      } else {
+        formulaBox.classList.add('hidden');
+        toggleText.textContent = 'แสดงสูตรคำนวณตารางวิเคราะห์รายได้และจุดคุ้มทุน';
+        toggleArrow.textContent = '▼';
+      }
+    }
+
+    function formatNumberWithComma(num, decimals = 0) {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+    }
+
+    function updateRoiLiveSummary() {
+      const machineCost = Math.max(0, parseFloat(roiMachineCostInput.value) || 0);
+      const installCost = Math.max(0, parseFloat(roiInstallCostInput.value) || 0);
+      const totalInvestment = machineCost + installCost;
+      roiTotalInvestmentDisplay.textContent = formatNumberWithComma(totalInvestment, 0);
+
+      const elecCost = parseFloat(roiElectricityCostInput.value) || 0;
+      const sellPrice = parseFloat(roiSellingPriceInput.value) || 0;
+      const margin = sellPrice - elecCost;
+      roiMarginPerUnitEl.textContent = `${margin.toFixed(3)} บาท`;
+      roiMarginPerUnitEl.className = margin >= 0 ? 'font-bold text-emerald-700' : 'font-bold text-red-600';
+    }
+
+    function setRoiElectricityCost(rate) {
+      roiElectricityCostInput.value = rate;
+      handleRoiInputChange();
+    }
+
+    function setRoiDefaultPlatform() {
+      roiPlatformFeeInput.value = 2500;
+      roiPaymentFeePercentInput.value = 1;
+      handleRoiInputChange();
+    }
+
+    function handleRoiInputChange() {
+      updateRoiLiveSummary();
+      roiCalculateBtn.classList.add('ring-4', 'ring-amber-400/50');
+    }
+
+    function calculateROI() {
+      updateRoiLiveSummary();
+
+      roiCalculateBtn.classList.remove('ring-4', 'ring-amber-400/50');
+
+      const chargerKw = Math.max(0, parseFloat(roiChargerKwInput.value) || 0);
+      const machineCost = Math.max(0, parseFloat(roiMachineCostInput.value) || 0);
+      const installCost = Math.max(0, parseFloat(roiInstallCostInput.value) || 0);
+      const totalInvestment = machineCost + installCost;
+
+      const electricityCost = Math.max(0, parseFloat(roiElectricityCostInput.value) || 0);
+      const sellingPrice = Math.max(0, parseFloat(roiSellingPriceInput.value) || 0);
+
+      const platformFee = Math.max(0, parseFloat(roiPlatformFeeInput.value) || 0);
+      const paymentFeePercent = Math.max(0, parseFloat(roiPaymentFeePercentInput.value) || 0);
+
+      latestPage2RowsData = [];
+      let rowsHtml = '';
+
+      roiDailyHoursList.forEach((hoursPerDay, index) => {
+        // 1. [ไฟที่ใช้(kWh)/เดือน] = [กำลังไฟฟ้า(kW)] * ([ชั่วโมงชาร์จ/วัน] * 30)
+        const monthlyKwh = chargerKw * (hoursPerDay * 30);
+
+        // 2. [รายได้(บาท)/ปี] = ([ไฟที่ใช้(kWh)/เดือน] * [ราคาขาย(บาท/หน่วย)]) * 12
+        const annualRevenue = (monthlyKwh * sellingPrice) * 12;
+
+        // 3. [ค่าใช้จ่าย(บาท)/ปี] = [ต้นทุนค่าไฟ(บาท)/ปี] + [ค่าบริการแพลตฟอร์ม(บาท)/ปี] + [ค่าธรรมเนียมการชำระเงิน(บาท)/ปี]
+        const annualElectricityCost = (monthlyKwh * electricityCost) * 12;
+        const annualPaymentFee = annualRevenue * (paymentFeePercent / 100);
+        const annualExpense = annualElectricityCost + platformFee + annualPaymentFee;
+
+        // 4. [กำไรสุทธิ(บาท)/ปี] = [รายได้(บาท)/ปี] - [ค่าใช้จ่าย(บาท)/ปี]
+        const netProfit = annualRevenue - annualExpense;
+
+        // 5. ROI(%) = ([กำไรสุทธิ(บาท)/ปี] / [ยอดรวมเงินลงทุน(บาท)]) * 100
+        const roiPercent = totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0;
+
+        // 6. คืนทุน = [ยอดรวมเงินลงทุน(บาท)] / [กำไรสุทธิ(บาท)/ปี] แปลงเป็น ปี และ เดือน
+        let paybackText = '-';
+        let paybackBadgeClass = 'text-gray-500';
+
+        if (totalInvestment === 0 && netProfit > 0) {
+          paybackText = '0 เดือน';
+          paybackBadgeClass = 'text-emerald-700 font-bold';
+        } else if (netProfit <= 0) {
+          paybackText = 'ไม่คืนทุน (ขาดทุน)';
+          paybackBadgeClass = 'text-red-600 font-semibold text-xs';
+        } else {
+          const paybackYears = totalInvestment / netProfit;
+          paybackText = formatYearsToRealDuration(paybackYears);
+          if (paybackYears <= 3) {
+            paybackBadgeClass = 'text-emerald-700 font-bold';
+          } else if (paybackYears <= 5) {
+            paybackBadgeClass = 'text-gray-900 font-bold';
+          } else {
+            paybackBadgeClass = 'text-amber-700 font-semibold';
+          }
+        }
+
+        latestPage2RowsData.push({
+          hoursPerDay,
+          chargerKw,
+          totalInvestment,
+          monthlyKwh,
+          annualRevenue,
+          annualExpense,
+          netProfit,
+          roiPercent,
+          paybackText
+        });
+
+        const profitColorClass = netProfit >= 0 ? 'text-emerald-700' : 'text-red-600';
+        const roiColorClass = roiPercent >= 0 ? 'text-gray-800' : 'text-red-600';
+
+        rowsHtml += `
+          <tr onclick="selectPage2Row(${index})" class="hover:bg-gray-50/90 transition-colors cursor-pointer" title="คลิกเพื่อดูคำบรรยายกรณีชาร์จ ${hoursPerDay} ชม./วัน">
+            <td class="py-3 px-3 text-center font-bold text-gray-900">
+              ${hoursPerDay} ชม.
+            </td>
+            <td class="py-3 px-3 text-right text-gray-700 font-medium">
+              ${formatNumberWithComma(monthlyKwh, 0)}
+            </td>
+            <td class="py-3 px-3 text-right text-gray-800 font-medium">
+              ${formatNumberWithComma(annualRevenue, 0)}
+            </td>
+            <td class="py-3 px-3 text-right text-gray-600">
+              ${formatNumberWithComma(annualExpense, 0)}
+            </td>
+            <td class="py-3 px-3 text-right font-bold bg-emerald-50/40 ${profitColorClass}">
+              ${formatNumberWithComma(netProfit, 0)}
+            </td>
+            <td class="py-3 px-3 text-center font-semibold ${roiColorClass}">
+              ${roiPercent.toFixed(2)}%
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap bg-gray-50/70 ${paybackBadgeClass}">
+              ${paybackText}
+            </td>
+          </tr>
+        `;
+      });
+
+      roiTableBody.innerHTML = rowsHtml;
+
+      // รีเซ็ตคำบรรยายใต้ตารางทุกครั้งที่กดปุ่มคำนวณใหม่
+      resetPage2RowDetailBox();
+    }
+
+    [
+      roiChargerKwInput,
+      roiMachineCostInput,
+      roiInstallCostInput,
+      roiElectricityCostInput,
+      roiSellingPriceInput,
+      roiPlatformFeeInput,
+      roiPaymentFeePercentInput
+    ].forEach(input => {
+      input.addEventListener('input', handleRoiInputChange);
+    });
+
+    roiCalculateBtn.addEventListener('click', calculateROI);
+
+    // คำนวณค่าเริ่มต้นทั้ง 2 หน้าเมื่อเปิดเว็บ
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateCharging();
+      calculateROI();
+    });
+  </script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
+
+</body>
+</html>
+
+
