@@ -8,7 +8,7 @@
 
 \## 📱 วิธีใช้งานผ่านมือถือ
 
-1\. เปิดลิงก์: `https://\[ชื่อ-username-ของคุณ].github.io/\[ชื่อ-repository]/`
+1\. เปิดลิงก์: https://sitinantw.github.io/cleanline-ev-calculator/
 
 2\. กดปุ่ม \*\*แชร์ (Share)\*\* หรือ \*\*เมนู (⋮)\*\* บนเบราว์เซอร์
 
